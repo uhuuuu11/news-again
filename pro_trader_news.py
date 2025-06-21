@@ -84,5 +84,38 @@ news_items = get_all_news()
 filtered = []
 
 for item in news_items:
-    title = item['title']
-    url
+    try:
+        title = item.get('title', 'No Title')
+        url = item.get('url') or item.get('link') or "#"
+        source = item.get('source', 'Unknown')
+        category = match_category(title)
+
+        if category not in active_cats:
+            continue
+        if only_urgent and not is_urgent(title):
+            continue
+
+        sentiment, color = analyze_sentiment(title)
+        urgent_flag = "⚠️" if is_urgent(title) else ""
+        time_str = datetime.now(pytz.timezone("Europe/Istanbul")).strftime("%Y-%m-%d %H:%M")
+
+        html_block = (
+            f"<a href='{url}' target='_blank' style='color:{color}'><b>{sentiment}</b> {urgent_flag}</a><br>"
+            f"<a href='{url}' target='_blank'>{title}</a><br>"
+            f"<small><i>{category} | {source} | {time_str}</i></small><hr>"
+        )
+        filtered.append((category, html_block))
+    except Exception as e:
+        st.error(f"Error parsing a news item: {e}")
+        continue
+
+st.markdown(f"### 📰 {len(filtered)} News Headlines")
+
+for _, html in filtered:
+    st.markdown(html, unsafe_allow_html=True)
+
+if not filtered:
+    st.info("No news matched your filters.")
+
+st.caption("⏱️ Auto-refreshes every 60 seconds.")
+st.experimental_rerun()
